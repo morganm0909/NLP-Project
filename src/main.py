@@ -4,8 +4,103 @@ from summarizer import summarize_text
 from keypoints import extract_key_points
 import nltk
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QTextEdit, QInputDialog, QComboBox, QLineEdit, QProgressBar
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QTextEdit, QInputDialog, QComboBox, QLineEdit, QProgressBar, QGroupBox, QFormLayout
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
+style_sheet = """
+QMainWindow {
+    background-color: #E4EDFA;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+QLabel {
+    font-size: 20px;
+    color: #333333;
+    margin-bottom: 4px;
+}
+
+QLineEdit, QComboBox, QTextEdit {
+    background-color: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 14px;
+    color: #222;
+}
+
+QLineEdit:focus, QComboBox:focus, QTextEdit:focus {
+    border: 1px solid #0078d4;
+    background-color: #fcfcfc;
+}
+
+QPushButton {
+    background-color: #FF99FA;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    margin-top: 6px;
+}
+
+QPushButton:hover {
+    background-color: #FF21FC;
+}
+
+QPushButton:pressed {
+    background-color: #004f8a;
+}
+
+QProgressBar {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    text-align: center;
+    background-color: #e9eef4;
+    height: 20px;
+    font-size: 12px;
+    color: #333;
+}
+
+QProgressBar::chunk {
+    background-color: #3AAD47;
+    border-radius: 10px;
+}
+
+QComboBox {
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+   
+
+
+QComboBox QAbstractItemView {
+    background-color: #2f2f2f;
+    color: white;
+    selection-background-color: #FF99FA;  /* highlight color */
+    selection-color: black;
+    padding: 5px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: #FFC8FF;  /* hover color */
+    color: black;
+}
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 3px;
+}
+
+"""
+
+
 
 class TextSummarizerApp(QMainWindow):
     def __init__(self):
@@ -15,87 +110,91 @@ class TextSummarizerApp(QMainWindow):
     def initUI(self):
         self.setWindowTitle('Text Summarizer')
         self.setGeometry(100, 100, 800, 600)
-
-        layout = QVBoxLayout()
-
-        self.label = QLabel('Load text from:')
-        layout.addWidget(self.label)
         
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(30, 30, 30, 30)
+        main_layout.setSpacing(20)
+
+        # Title
+        self.title = QLabel("📝 Text Summarizer Tool")
+        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #333; margin-bottom: 20px;")
+        main_layout.addWidget(self.title, alignment=Qt.AlignCenter)
+
+        # Input Section
+        input_layout = QVBoxLayout()
+        input_layout.setSpacing(10)
+
+        input_label = QLabel("Select Input Source:")
+        input_label.setStyleSheet("font-weight: bold;")
+        input_layout.addWidget(input_label)
+
         self.source_selector = QComboBox()
         self.source_selector.addItems(["File", "Pdf", "Url"])
-        layout.addWidget(QLabel("Select Input Source:"))
-        layout.addWidget(self.source_selector)
-        
+        input_layout.addWidget(self.source_selector)
+
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("Enter file path, PDF path, or URL")
-        layout.addWidget(self.input_field)
+        input_layout.addWidget(self.input_field)
 
-        browse_button = QPushButton("Browse")
-        browse_button.clicked.connect(self.browse_file)
-        layout.addWidget(browse_button)
+        self.browse_button = QPushButton("Browse")
+        self.browse_button.clicked.connect(self.browse_file)
+        input_layout.addWidget(self.browse_button)
 
-        # self.file_button = QPushButton('File')
-        # self.file_button.clicked.connect(self.load_file)
-        # layout.addWidget(self.file_button)
+        main_layout.addLayout(input_layout)
 
-        # self.pdf_button = QPushButton('PDF')
-        # self.pdf_button.clicked.connect(self.load_pdf)
-        # layout.addWidget(self.pdf_button)
-
-        # self.url_button = QPushButton('URL')
-        # self.url_button.clicked.connect(self.load_url)
-        # layout.addWidget(self.url_button)
-
+        # Raw Text Display
+        text_input_group = QGroupBox("Raw Text Input")
+        text_layout = QVBoxLayout()
         self.text_edit = QTextEdit()
-        layout.addWidget(self.text_edit)
+        self.text_edit.setPlaceholderText("Loaded or pasted raw text will appear here...")
+        text_layout.addWidget(self.text_edit)
+        text_input_group.setLayout(text_layout)
+        main_layout.addWidget(text_input_group)
 
-        # self.summarize_button = QPushButton('Summarize')
-        # self.summarize_button.clicked.connect(self.summarize_text)
-        # layout.addWidget(self.summarize_button)
-        
-        analyze_button = QPushButton("Analyze")
-        analyze_button.clicked.connect(self.analyze_text)
-        layout.addWidget(analyze_button)
-        
+        # Analyze Button
+        self.analyze_button = QPushButton("🔍 Analyze")
+        self.analyze_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.analyze_button.clicked.connect(self.analyze_text)
+        main_layout.addWidget(self.analyze_button)
+
+        # Progress Bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setAlignment(Qt.AlignCenter)
         self.progress_bar.setValue(0)
-        layout.addWidget(self.progress_bar)
-        
+        main_layout.addWidget(self.progress_bar)
+
+        # Summary Output
+        summary_group = QGroupBox("📄 Summary:")
+        summary_layout = QVBoxLayout()
+        # summary_label.setStyleSheet("font-weight: bold;")
+        # main_layout.addWidget(summary_label)
+
         self.summary_output = QTextEdit()
         self.summary_output.setReadOnly(True)
-        layout.addWidget(QLabel("Summary:"))
-        layout.addWidget(self.summary_output)
-        
+        self.summary_output.setPlaceholderText("Summary will appear here...")
+        summary_layout.addWidget(self.summary_output)
+        summary_group.setLayout(summary_layout)
+        main_layout.addWidget(summary_group)
+
+        # Key Points Output
+        keypoints_group = QGroupBox("🧠 Key Points:")
+        # keypoints_label.setStyleSheet("font-weight: bold;")
+        keypoints_layout = QVBoxLayout()
+        # main_layout.addWidget(keypoints_label)
+
         self.keypoints_output = QTextEdit()
         self.keypoints_output.setReadOnly(True)
-        layout.addWidget(QLabel("Key Points:"))
-        layout.addWidget(self.keypoints_output)
+        self.keypoints_output.setPlaceholderText("Extracted key points will appear here...")
+        keypoints_layout.addWidget(self.keypoints_output)
+        keypoints_group.setLayout(keypoints_layout)
+        main_layout.addWidget(keypoints_group)
 
+        # Set main layout
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(main_layout)
         self.setCentralWidget(container)
 
-    # def load_file(self):
-    #     options = QFileDialog.Options()
-    #     file_path, _ = QFileDialog.getOpenFileName(self, "Select Text File", "", "Text Files (*.txt);;All Files (*)", options=options)
-    #     if file_path:
-    #         text = load_text_from_file(file_path)
-    #         self.text_edit.setPlainText(text)
 
-    # def load_pdf(self):
-    #     options = QFileDialog.Options()
-    #     pdf_path, _ = QFileDialog.getOpenFileName(self, "Select PDF File", "", "PDF Files (*.pdf);;All Files (*)", options=options)
-    #     if pdf_path:
-    #         text = load_text_from_pdf(pdf_path)
-    #         self.text_edit.setPlainText(text)
-
-    # def load_url(self):
-    #     url, ok = QInputDialog.getText(self, 'Input URL', 'Enter URL:')
-    #     if ok and url:
-    #         text = load_text_from_url(url)
-    #         self.text_edit.setPlainText(text)
-    
     def browse_file(self):
         source = self.source_selector.currentText()
         if source in ["File", "Pdf"]:
@@ -205,6 +304,8 @@ class AnalysisWorker(QThread):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(style_sheet)
+
     window = TextSummarizerApp()
     window.show()
     sys.exit(app.exec_())
