@@ -1,0 +1,11 @@
+transformers
+torch
+numpy
+spacy
+nltk
+PyPDF2
+requests
+rouge-score
+bert-score
+PyQt5
+datasets

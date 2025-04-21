@@ -2,8 +2,6 @@ import re
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-nltk.download('punkt')
-
 def clean_text(text):
     """Remove special characters, extra spaces, and normalize text."""
     text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
