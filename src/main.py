@@ -457,8 +457,11 @@ class AnalysisWorker(QThread):
             
             # Clean text
             cleaned = clean_text(self.text)
+            if not cleaned or len(cleaned.split()) < 20:
+                raise ValueError("Insufficient content for summarization.")
             self.progress.emit(20)
-            
+            print("CLEANED CONTENT:\n", cleaned[:500])  # Just the first 500 chars
+
             # Create summarizer based on selected model
             if self.model_type == "custom" and self.custom_path:
                 summarizer = SummarizerFactory.get_summarizer("custom", self.custom_path)

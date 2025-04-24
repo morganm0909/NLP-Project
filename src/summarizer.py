@@ -15,36 +15,41 @@ class SummarizerModel:
         
     def load(self):
         """Load the model and tokenizer"""
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
         self.summarizer = pipeline(
             "summarization", 
-            model=self.model_name, 
+            model=self.model, 
+            tokenizer=self.tokenizer,
             device=0 if self.device == "cuda" else -1
         )
         return self
-        
+
     def summarize(self, text: str, max_length: int = None, min_length: int = None, 
-                  ratio: float = 0.3, **kwargs) -> str:
-        """Generate a summary of the input text"""
-        if max_length is None:
-            # Default to 30% of original text length, minimum 50 tokens
-            text_length = len(text.split())
-            max_length = max(50, int(text_length * ratio))
-            
-        if min_length is None:
-            min_length = max(30, int(max_length * 0.3))
-            
-        # Ensure max_length is within model limits (typically 1024 for BART)
+              ratio: float = 0.3, **kwargs) -> str:
+        text = text.strip()
+        if not text or len(text.split()) < 20:
+            raise ValueError("Input text is too short for summarization.")
+        
+        tokens = self.tokenizer.tokenize(text)
+        if len(tokens) < 10:
+            raise ValueError("Input has too few tokens after tokenization.")
+        
+        text_length = len(text.split())
+        max_length = max(50, int(text_length * ratio)) if max_length is None else max_length
+        min_length = max(30, int(max_length * 0.3)) if min_length is None else min_length
         max_length = min(1024, max_length)
+
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=1024)
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
-        summary = self.summarizer(
-            text, 
-            max_length=max_length, 
-            min_length=min_length, 
-            do_sample=False,
-            **kwargs
+        summary_ids = self.model.generate(
+            **inputs, max_length=max_length, min_length=min_length, do_sample=False, **kwargs
         )
-        
-        return summary[0]['summary_text']
+        summary = self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+        return summary
+
+
 
 
 class FineTunedSummarizer(SummarizerModel):

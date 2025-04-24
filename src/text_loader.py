@@ -23,10 +23,30 @@ def load_text_from_pdf(pdf_path):
     
     return text.strip()
 
+import requests
+from bs4 import BeautifulSoup
+
 def load_text_from_url(url):
-    """Fetch text content from a webpage."""
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    else:
+    """Fetch and clean text content from a webpage."""
+    headers = {'User-Agent': 'Mozilla/5.0'}  # Pretend to be a browser
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
         raise Exception(f"Failed to retrieve content from {url}, Status Code: {response.status_code}")
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Remove scripts, styles, and nav
+    for tag in soup(["script", "style", "nav", "header", "footer", "noscript"]):
+        tag.decompose()
+
+    # Extract visible text
+    text = soup.get_text(separator=' ', strip=True)
+
+    # Collapse multiple spaces and newlines
+    cleaned_text = ' '.join(text.split())
+
+    if len(cleaned_text.split()) < 20:
+        raise Exception("Retrieved content is too short or not suitable for summarization.")
+
+    return cleaned_text
